@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionTabsView: View {
     @Environment(SessionManager.self) private var sessions
+    @State private var isKeyboardVisible = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -12,28 +13,51 @@ struct SessionTabsView: View {
                     Text("Select a host from the Hosts tab to connect.")
                 }
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(sessions.sessions) { session in
-                            TabItem(session: session, isActive: session.id == sessions.activeID) {
-                                sessions.activate(session)
-                            } onClose: {
-                                sessions.close(session)
+                HStack(spacing: 0) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(sessions.sessions) { session in
+                                TabItem(session: session, isActive: session.id == sessions.activeID) {
+                                    sessions.activate(session)
+                                } onClose: {
+                                    sessions.close(session)
+                                }
                             }
                         }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
+                    
+                    if let active = sessions.activeSession {
+                        Button {
+                            isKeyboardVisible.toggle()
+                        } label: {
+                            Image(systemName: isKeyboardVisible ? "keyboard.chevron.compact.down" : "keyboard")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(Color(white: 0.25))
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 8)
+                    }
                 }
                 .background(Color(white: 0.15))
 
                 Divider()
 
                 if let active = sessions.activeSession {
-                    TerminalHostView(session: active)
+                    TerminalHostView(session: active, isFocused: $isKeyboardVisible)
                         .id(active.id)
                 }
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+            isKeyboardVisible = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
+            isKeyboardVisible = false
         }
     }
 }
@@ -88,10 +112,11 @@ private struct TabItem: View {
 /// Wraps the UIKit terminal view and overlays trust prompts and disconnect banners.
 private struct TerminalHostView: View {
     let session: TerminalSession
+    @Binding var isFocused: Bool
 
     var body: some View {
         ZStack(alignment: .top) {
-            TerminalRepresentable(terminalView: session.terminalView)
+            TerminalRepresentable(terminalView: session.terminalView, isFocused: $isFocused)
 
             if let prompt = session.hostKeyPrompt {
                 HostKeyPromptView(prompt: prompt) { session.resolveHostKeyPrompt(trust: $0) }
@@ -115,9 +140,17 @@ private struct TerminalHostView: View {
 
 private struct TerminalRepresentable: UIViewRepresentable {
     let terminalView: UIView
+    @Binding var isFocused: Bool
 
     func makeUIView(context: Context) -> UIView { terminalView }
-    func updateUIView(_ uiView: UIView, context: Context) {}
+    
+    func updateUIView(_ uiView: UIView, context: Context) {
+        if isFocused && !uiView.isFirstResponder {
+            DispatchQueue.main.async { uiView.becomeFirstResponder() }
+        } else if !isFocused && uiView.isFirstResponder {
+            DispatchQueue.main.async { uiView.resignFirstResponder() }
+        }
+    }
 }
 
 private struct HostKeyPromptView: View {
