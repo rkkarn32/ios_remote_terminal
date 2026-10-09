@@ -1,0 +1,76 @@
+name: RemoteTerminal
+options:
+  bundleIdPrefix: con.sshapp
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: ""          # set your Apple Team ID here for on-device builds
+    CODE_SIGN_STYLE: Automatic
+
+packages:
+  NIOSSH:
+    url: https://github.com/apple/swift-nio-ssh
+    from: 0.15.0
+  NIO:
+    url: https://github.com/apple/swift-nio
+    from: 2.81.0
+  NIOTransportServices:
+    url: https://github.com/apple/swift-nio-transport-services
+    from: 1.28.0
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    version: 1.18.0
+
+targets:
+  RemoteTerminal:
+    type: application
+    platform: iOS
+    sources: [RemoteTerminal]
+    dependencies:
+      - package: NIOSSH
+      - package: NIO
+        product: NIOCore
+      - package: NIO
+        product: NIOConcurrencyHelpers
+      - package: NIOTransportServices
+      - package: SwiftTerm
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: con.sshapp.RemoteTerminal
+        PRODUCT_NAME: RemoteTerminal
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_KEY_CFBundleDisplayName: RemoteTerminal
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "RemoteTerminal connects to computers on your local network over SSH."
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+
+  RemoteTerminalTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [RemoteTerminalTests]
+    dependencies:
+      - target: RemoteTerminal
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: con.sshapp.RemoteTerminalTests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/RemoteTerminal.app/RemoteTerminal"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  RemoteTerminal:
+    build:
+      targets:
+        RemoteTerminal: all
+        RemoteTerminalTests: [test]
+    test:
+      targets: [RemoteTerminalTests]
