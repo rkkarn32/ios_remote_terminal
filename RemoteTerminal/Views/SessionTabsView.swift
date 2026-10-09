@@ -92,7 +92,6 @@ private struct TerminalHostView: View {
     var body: some View {
         ZStack(alignment: .top) {
             TerminalRepresentable(terminalView: session.terminalView)
-                .ignoresSafeArea(.keyboard)
 
             if let prompt = session.hostKeyPrompt {
                 HostKeyPromptView(prompt: prompt) { session.resolveHostKeyPrompt(trust: $0) }
